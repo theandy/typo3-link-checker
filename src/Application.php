@@ -33,8 +33,6 @@ class Application
         $crawler = new PageCrawler();
         $checker = new NavigationLinkChecker();
         $cacheManager = new Typo3CacheManager($config);
-
-        // HIER war der Fehler
         $mailer = new Mailer($config, $logger);
 
         $sites = $siteRepo->getSites();
@@ -50,22 +48,29 @@ class Application
                 $site['languageId']
             );
 
-            $totalPages = count($pages);
+            $urls = [];
 
-            $logger->log("Found $totalPages pages");
+            foreach ($pages as $page) {
+
+                $urls[] =
+                    rtrim($site['base'], '/') .
+                    '/' .
+                    ltrim($page['slug'], '/');
+
+            }
+
+            $logger->log("Found " . count($urls) . " pages");
 
             $siteLinkCount = 0;
             $siteInvalidCount = 0;
 
-            $i = 1;
-
-            foreach ($pages as $page) {
-
-                $url = rtrim($site['base'], '/') . '/' . ltrim($page['slug'], '/');
-
-                $logger->log("[$i/$totalPages] $url");
-
-                $html = $crawler->fetch($url);
+            $crawler->fetchMultiple($urls, function ($url, $html) use (
+                $checker,
+                &$siteLinkCount,
+                &$siteInvalidCount,
+                &$invalidPages,
+                $logger
+            ) {
 
                 $linkCount = $checker->countNavigationLinks($html);
                 $invalidCount = $checker->countInvalidLinks($html);
@@ -75,15 +80,13 @@ class Application
 
                 if ($invalidCount > 0) {
 
-                    $logger->log("INVALID LINK FOUND ($invalidCount)");
+                    $logger->log("INVALID LINK FOUND on $url ($invalidCount)");
 
                     $invalidPages[] = $url;
 
                 }
 
-                $i++;
-
-            }
+            });
 
             $logger->log("Navigation links found: $siteLinkCount");
             $logger->log("Invalid navigation links: $siteInvalidCount");
@@ -102,23 +105,21 @@ class Application
 
             $logger->log("Rechecking pages");
 
-            $stillBroken = [];
-
-            foreach ($invalidPages as $url) {
-
-                $logger->log("Recheck: $url");
-
-                $html = $crawler->fetch($url);
+            $crawler->fetchMultiple($invalidPages, function ($url, $html) use (
+                $checker,
+                &$stillBroken,
+                $logger
+            ) {
 
                 if ($checker->countInvalidLinks($html) > 0) {
 
-                    $logger->log("STILL INVALID");
+                    $logger->log("STILL INVALID: $url");
 
                     $stillBroken[] = $url;
 
                 }
 
-            }
+            });
 
             if (!empty($stillBroken)) {
 

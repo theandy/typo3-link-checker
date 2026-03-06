@@ -10,26 +10,24 @@ return [
     ],
 
     'typo3' => [
-        'root_path' => '/var/www/clients/client59/web1210/web/'
+        'root_path' => '/var/www/project/'
     ],
 
     'mail' => [
-
-        'to' => 'loewer@werbestudio-mack.de',
+        'to' => 'admin@example.com',
 
         'smtp' => [
-            'host' => 'mail.werbestudio-mack.de',
+            'host' => 'mail.example.com',
             'port' => 587,
-            'username' => 'monitor@werbestudio-mack.de',
-            'password' => 'PASSWORT',
+            'username' => 'monitor@example.com',
+            'password' => 'PASSWORD',
             'encryption' => 'tls'
         ],
 
         'from' => [
-            'address' => 'monitor@werbestudio-mack.de',
-            'name' => 'TYPO3 Site Monitor'
+            'address' => 'monitor@example.com',
+            'name' => 'TYPO3 Monitor'
         ]
-
     ],
 
     'log' => [

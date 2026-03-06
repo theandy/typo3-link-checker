@@ -3,6 +3,8 @@
 namespace LinkChecker\Crawler;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Pool;
+use GuzzleHttp\Psr7\Request;
 
 class PageCrawler
 {
@@ -11,26 +13,49 @@ class PageCrawler
 
     public function __construct()
     {
+
         $this->client = new Client([
-            'timeout' => 10,
-            'verify' => false
+            'timeout' => 5,
+            'connect_timeout' => 3,
+            'verify' => false,
+            'headers' => [
+                'User-Agent' => 'TYPO3-LinkChecker'
+            ]
         ]);
+
     }
 
-    public function fetch(string $url): string
+    public function fetchMultiple(array $urls, callable $callback, int $concurrency = 20): void
     {
 
-        try {
+        $requests = function ($urls) {
+            foreach ($urls as $url) {
+                yield new Request('GET', $url);
+            }
+        };
 
-            $response = $this->client->get($url);
+        $pool = new Pool($this->client, $requests($urls), [
 
-            return (string) $response->getBody();
+            'concurrency' => $concurrency,
 
-        } catch (\Exception $e) {
+            'fulfilled' => function ($response, $index) use ($urls, $callback) {
 
-            return '';
+                $html = (string)$response->getBody();
 
-        }
+                $callback($urls[$index], $html);
+
+            },
+
+            'rejected' => function ($reason, $index) use ($urls, $callback) {
+
+                $callback($urls[$index], '');
+
+            }
+
+        ]);
+
+        $promise = $pool->promise();
+        $promise->wait();
 
     }
 
