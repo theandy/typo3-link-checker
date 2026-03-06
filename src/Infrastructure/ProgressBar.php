@@ -4,7 +4,6 @@ namespace LinkChecker\Infrastructure;
 
 class ProgressBar
 {
-
     private int $total;
     private int $current = 0;
     private int $width = 30;
@@ -16,25 +15,29 @@ class ProgressBar
 
     public function advance(): void
     {
-
         $this->current++;
+        $this->render();
+    }
+
+    public function render(): void
+    {
 
         $percent = $this->current / $this->total;
 
-        $filled = floor($percent * $this->width);
+        $filled = (int)floor($percent * $this->width);
 
         $bar =
             str_repeat('█', $filled) .
             str_repeat('░', $this->width - $filled);
 
-        $percentText = floor($percent * 100);
+        $percentText = (int)floor($percent * 100);
 
         echo "\rProgress: [$bar] {$percentText}% ({$this->current}/{$this->total})";
-
-        if ($this->current >= $this->total) {
-            echo PHP_EOL;
-        }
-
     }
 
+    public function finish(): void
+    {
+        $this->render();
+        echo PHP_EOL;
+    }
 }

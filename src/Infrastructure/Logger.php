@@ -43,6 +43,7 @@ class Logger
 
     private function write(string $level, string $message, string $color): void
     {
+
         $timestamp = date('Y-m-d H:i:s');
 
         $line = "[$timestamp] [$level] $message";
@@ -55,6 +56,8 @@ class Logger
 
         $reset = "\033[0m";
 
+        echo PHP_EOL;
         echo $color . $line . $reset . PHP_EOL;
+
     }
 }

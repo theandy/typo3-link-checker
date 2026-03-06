@@ -15,8 +15,10 @@ use LinkChecker\Checker\NavigationLinkChecker;
 
 class Application
 {
+
     public function run(): void
     {
+
         $config = new Config();
 
         $logger = new Logger(
@@ -94,6 +96,7 @@ class Application
 
                     $progress->advance();
                     return;
+
                 }
 
                 $linkCount = $checker->countNavigationLinks($html);
@@ -109,14 +112,79 @@ class Application
                     $logger->warn("INVALID LINK FOUND ($invalidCount)");
 
                     $invalidPages[$url] = $invalidCount;
+
                 }
 
                 $progress->advance();
+
             });
 
             $logger->info("Navigation links found: $siteLinkCount");
             $logger->info("Invalid navigation links: $siteInvalidCount");
+
         }
+
+        /*
+        CACHE FLUSH + RECHECK
+        */
+
+        if (!empty($invalidPages)) {
+
+            $logger->warn("Invalid pages found: " . count($invalidPages));
+
+            $logger->info("Flushing TYPO3 cache");
+
+            $cacheManager->flush();
+
+            sleep(5);
+
+            $stillBroken = [];
+
+            $crawler->fetchMultiple(array_keys($invalidPages), function ($url, $html, $error) use (
+                $checker,
+                &$stillBroken,
+                $logger
+            ) {
+
+                $logger->info("Rechecking page: $url");
+
+                if ($error) {
+
+                    $logger->error("ERROR during recheck");
+
+                    return;
+
+                }
+
+                if ($checker->countInvalidLinks($html) > 0) {
+
+                    $logger->warn("STILL INVALID");
+
+                    $stillBroken[] = $url;
+
+                }
+
+            });
+
+            if (!empty($stillBroken)) {
+
+                $logger->warn("Errors remain after cache flush");
+
+                $mailer->send($stillBroken);
+
+                $logger->success("Mail sent");
+
+            } else {
+
+                $logger->success("Errors disappeared after cache flush");
+
+            }
+
+        }
+
+        /*
+        SUMMARY
+        */
 
         $logger->info("");
         $logger->info("===== SUMMARY =====");
@@ -126,12 +194,15 @@ class Application
             $logger->warn("Pages with invalid navigation links:");
 
             foreach ($invalidPages as $url => $count) {
+
                 $logger->warn("$url (invalid links: $count)");
+
             }
 
         } else {
 
             $logger->success("No invalid navigation links found.");
+
         }
 
         $logger->info("");
@@ -144,20 +215,24 @@ class Application
 
                 $logger->error($url);
                 $logger->error("Reason: $reason");
+
             }
 
         } else {
 
             $logger->success("All pages could be loaded successfully.");
+
         }
 
         $logger->info("===== END SUMMARY =====");
 
         $logger->success("Finished");
+
     }
 
     private function normalizeError($error): string
     {
+
         $msg = $error->getMessage() ?? '';
 
         if (str_contains($msg, 'cURL error 28')) {
@@ -177,5 +252,7 @@ class Application
         }
 
         return $msg;
+
     }
+
 }
