@@ -24,7 +24,6 @@ class Application
 
         $logger->log("TYPO3 Navigation Link Checker started");
 
-
         $db = new DatabaseConnection($config);
         $siteRepo = new SiteRepository($config);
         $pageRepo = new PageRepository($db);
@@ -33,18 +32,9 @@ class Application
         $cacheManager = new Typo3CacheManager($config);
         $mailer = new Mailer($config);
 
-
         $sites = $siteRepo->getSites();
 
-        if (!$sites) {
-
-            $logger->log("No sites found.");
-            return;
-
-        }
-
         $invalidPages = [];
-
 
         foreach ($sites as $site) {
 
@@ -55,9 +45,12 @@ class Application
                 $site['languageId']
             );
 
-            $total = count($pages);
+            $totalPages = count($pages);
 
-            $logger->log("Found $total pages");
+            $logger->log("Found $totalPages pages");
+
+            $siteLinkCount = 0;
+            $siteInvalidCount = 0;
 
             $i = 1;
 
@@ -65,13 +58,19 @@ class Application
 
                 $url = rtrim($site['base'], '/') . '/' . ltrim($page['slug'], '/');
 
-                $logger->log("[$i/$total] $url");
+                $logger->log("[$i/$totalPages] $url");
 
                 $html = $crawler->fetch($url);
 
-                if ($checker->hasInvalidLink($html)) {
+                $linkCount = $checker->countNavigationLinks($html);
+                $invalidCount = $checker->countInvalidLinks($html);
 
-                    $logger->log("INVALID LINK FOUND");
+                $siteLinkCount += $linkCount;
+                $siteInvalidCount += $invalidCount;
+
+                if ($invalidCount > 0) {
+
+                    $logger->log("INVALID LINK FOUND ($invalidCount)");
 
                     $invalidPages[] = $url;
 
@@ -81,12 +80,14 @@ class Application
 
             }
 
-        }
+            $logger->log("Navigation links found: $siteLinkCount");
+            $logger->log("Invalid navigation links: $siteInvalidCount");
 
+        }
 
         if (!empty($invalidPages)) {
 
-            $logger->log("Invalid links found: " . count($invalidPages));
+            $logger->log("Invalid pages found: " . count($invalidPages));
 
             $logger->log("Flushing TYPO3 cache");
 
@@ -104,7 +105,7 @@ class Application
 
                 $html = $crawler->fetch($url);
 
-                if ($checker->hasInvalidLink($html)) {
+                if ($checker->countInvalidLinks($html) > 0) {
 
                     $logger->log("STILL INVALID");
 

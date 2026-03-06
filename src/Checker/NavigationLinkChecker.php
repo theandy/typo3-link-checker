@@ -5,22 +5,33 @@ namespace LinkChecker\Checker;
 class NavigationLinkChecker
 {
 
-    public function hasInvalidLink(string $html): bool
+    public function countNavigationLinks(string $html): int
     {
 
         if (!$html) {
-            return false;
+            return 0;
         }
 
-        /*
-         * Sucht nach
-         * <!-- navigation-link-href:'' -->
-         * mit optionalen Leerzeichen
-         */
+        preg_match_all('/navigation-link-href:/i', $html, $matches);
 
-        $pattern = '/<!--\s*navigation-link-href:\s*\'\'\s*-->/i';
+        return count($matches[0]);
 
-        return preg_match($pattern, $html) === 1;
+    }
+
+    public function countInvalidLinks(string $html): int
+    {
+
+        if (!$html) {
+            return 0;
+        }
+
+        preg_match_all(
+            '/<!--\s*navigation-link-href:\s*[\'"]\s*[\'"]\s*-->/i',
+            $html,
+            $matches
+        );
+
+        return count($matches[0]);
 
     }
 
