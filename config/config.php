@@ -4,24 +4,36 @@ return [
 
     'database' => [
         'host' => 'localhost',
-        'dbname' => 'typo3',
-        'user' => 'dbuser',
+        'dbname' => 'typo3_db',
+        'user' => 'typo3_user',
         'password' => 'secret'
     ],
 
     'typo3' => [
-        'root_path' => '/var/www/typo3project/'
+        'root_path' => '/var/www/clients/client59/web1210/web/'
     ],
 
     'mail' => [
-        'to' => 'admin@example.com'
+
+        'to' => 'loewer@werbestudio-mack.de',
+
+        'smtp' => [
+            'host' => 'mail.werbestudio-mack.de',
+            'port' => 587,
+            'username' => 'monitor@werbestudio-mack.de',
+            'password' => 'PASSWORT',
+            'encryption' => 'tls'
+        ],
+
+        'from' => [
+            'address' => 'monitor@werbestudio-mack.de',
+            'name' => 'TYPO3 Site Monitor'
+        ]
+
     ],
 
     'log' => [
         'file' => __DIR__ . '/../logs/link-checker.log',
-
-        // true = Log bei jedem Start neu schreiben
-        // false = Log anhängen
         'overwrite' => true
     ]
 
