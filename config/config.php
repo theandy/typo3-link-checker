@@ -14,8 +14,7 @@ return [
     ],
 
     'mail' => [
-        'to' => 'admin@example.com',
-        'from' => 'monitor@example.com'
+        'to' => 'admin@example.com'
     ],
 
     'log' => [

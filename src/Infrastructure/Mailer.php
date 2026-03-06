@@ -8,25 +8,78 @@ use LinkChecker\Config\Config;
 class Mailer
 {
 
-    private array $mailConfig;
+    private array $config;
+    private array $typo3Mail;
 
     public function __construct(Config $config)
     {
-        $this->mailConfig = $config->get('mail');
+        $this->config = $config->get('mail');
+        $this->typo3Mail = $this->loadTypo3MailConfig($config);
+    }
+
+    private function loadTypo3MailConfig(Config $config): array
+    {
+
+        $settingsFile = rtrim($config->get('typo3')['root_path'], '/') . '/config/system/settings.php';
+
+        if (!file_exists($settingsFile)) {
+            throw new \RuntimeException('TYPO3 settings.php not found');
+        }
+
+        $settings = require $settingsFile;
+
+        return $settings['MAIL'] ?? [];
+
     }
 
     public function send(array $pages): void
     {
 
-        $mail = new PHPMailer();
+        $mail = new PHPMailer(true);
 
-        $mail->setFrom($this->mailConfig['from']);
+        /*
+         * TYPO3 Mail Transport
+         */
 
-        $mail->addAddress($this->mailConfig['to']);
+        if (($this->typo3Mail['transport'] ?? '') === 'smtp') {
 
-        $mail->Subject = 'TYPO3 Navigation Fehler';
+            $mail->isSMTP();
 
-        $body = "Folgende Seiten enthalten leere Navigation Links:\n\n";
+            $server = $this->typo3Mail['transport_smtp_server'] ?? '';
+
+            if (strpos($server, ':') !== false) {
+                [$host, $port] = explode(':', $server);
+            } else {
+                $host = $server;
+                $port = 25;
+            }
+
+            $mail->Host = $host;
+            $mail->Port = (int)$port;
+
+            $mail->SMTPAuth = true;
+            $mail->Username = $this->typo3Mail['transport_smtp_username'] ?? '';
+            $mail->Password = $this->typo3Mail['transport_smtp_password'] ?? '';
+        }
+
+        /*
+         * Absender aus TYPO3
+         */
+
+        $mail->setFrom(
+            $this->typo3Mail['defaultMailFromAddress'] ?? 'noreply@example.com',
+            $this->typo3Mail['defaultMailFromName'] ?? 'TYPO3'
+        );
+
+        /*
+         * Empfänger aus Tool Config
+         */
+
+        $mail->addAddress($this->config['to']);
+
+        $mail->Subject = 'TYPO3 Navigation Fehler gefunden';
+
+        $body = "Folgende Seiten enthalten leere navigation-link-href:\n\n";
 
         foreach ($pages as $p) {
             $body .= $p . "\n";
