@@ -12,7 +12,15 @@ class NavigationLinkChecker
             return false;
         }
 
-        return preg_match("/navigation-link-href:'\\s*'/", $html) === 1;
+        /*
+         * Sucht nach
+         * <!-- navigation-link-href:'' -->
+         * mit optionalen Leerzeichen
+         */
+
+        $pattern = '/<!--\s*navigation-link-href:\s*\'\'\s*-->/i';
+
+        return preg_match($pattern, $html) === 1;
 
     }
 
