@@ -7,15 +7,16 @@ use LinkChecker\Infrastructure\DatabaseConnection;
 use LinkChecker\Infrastructure\Mailer;
 use LinkChecker\Infrastructure\Typo3CacheManager;
 use LinkChecker\Infrastructure\Logger;
-use LinkChecker\Infrastructure\ProgressBar;
 use LinkChecker\Typo3\SiteRepository;
 use LinkChecker\Typo3\PageRepository;
 use LinkChecker\Crawler\PageCrawler;
 use LinkChecker\Checker\NavigationLinkChecker;
 
+use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Output\ConsoleOutput;
+
 class Application
 {
-
     public function run(): void
     {
 
@@ -25,6 +26,8 @@ class Application
             $config->get('log')['file'],
             $config->get('log')['overwrite']
         );
+
+        $output = new ConsoleOutput();
 
         $logger->info("TYPO3 Navigation Link Checker started");
 
@@ -65,7 +68,8 @@ class Application
 
             $logger->info("Found $total pages");
 
-            $progress = new ProgressBar($total);
+            $progress = new ProgressBar($output, $total);
+            $progress->start();
 
             $siteLinkCount = 0;
             $siteInvalidCount = 0;
@@ -77,13 +81,8 @@ class Application
                 &$invalidPages,
                 &$failedPages,
                 $logger,
-                $total,
                 $progress
             ) {
-
-                $pos = $index + 1;
-
-                $logger->info("[$pos/$total] $url");
 
                 if ($error) {
 
@@ -102,14 +101,12 @@ class Application
                 $linkCount = $checker->countNavigationLinks($html);
                 $invalidCount = $checker->countInvalidLinks($html);
 
-                $logger->info("Navigation markers: $linkCount");
-
                 $siteLinkCount += $linkCount;
                 $siteInvalidCount += $invalidCount;
 
                 if ($invalidCount > 0) {
 
-                    $logger->warn("INVALID LINK FOUND ($invalidCount)");
+                    $logger->warn("INVALID LINK FOUND ($invalidCount) on $url");
 
                     $invalidPages[$url] = $invalidCount;
 
@@ -118,6 +115,9 @@ class Application
                 $progress->advance();
 
             });
+
+            $progress->finish();
+            echo PHP_EOL;
 
             $logger->info("Navigation links found: $siteLinkCount");
             $logger->info("Invalid navigation links: $siteInvalidCount");
@@ -149,11 +149,7 @@ class Application
                 $logger->info("Rechecking page: $url");
 
                 if ($error) {
-
-                    $logger->error("ERROR during recheck");
-
                     return;
-
                 }
 
                 if ($checker->countInvalidLinks($html) > 0) {
@@ -190,8 +186,6 @@ class Application
         $logger->info("===== SUMMARY =====");
 
         if (!empty($invalidPages)) {
-
-            $logger->warn("Pages with invalid navigation links:");
 
             foreach ($invalidPages as $url => $count) {
 

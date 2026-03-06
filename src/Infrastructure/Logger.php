@@ -21,6 +21,11 @@ class Logger
         }
     }
 
+    public function log(string $message): void
+    {
+        $this->info($message);
+    }
+
     public function info(string $message): void
     {
         $this->write('INFO', $message, "\033[0m");
@@ -43,7 +48,6 @@ class Logger
 
     private function write(string $level, string $message, string $color): void
     {
-
         $timestamp = date('Y-m-d H:i:s');
 
         $line = "[$timestamp] [$level] $message";
@@ -56,8 +60,6 @@ class Logger
 
         $reset = "\033[0m";
 
-        echo PHP_EOL;
         echo $color . $line . $reset . PHP_EOL;
-
     }
 }
