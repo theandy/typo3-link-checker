@@ -6,6 +6,7 @@ use LinkChecker\Config\Config;
 use LinkChecker\Infrastructure\DatabaseConnection;
 use LinkChecker\Infrastructure\Mailer;
 use LinkChecker\Infrastructure\Typo3CacheManager;
+use LinkChecker\Infrastructure\Logger;
 use LinkChecker\Typo3\SiteRepository;
 use LinkChecker\Typo3\PageRepository;
 use LinkChecker\Crawler\PageCrawler;
@@ -17,23 +18,19 @@ class Application
     public function run(): void
     {
 
-        echo "\nTYPO3 Navigation Link Checker\n";
-        echo "---------------------------------\n\n";
-
         $config = new Config();
 
+        $logger = new Logger($config->get('log')['file']);
+
+        $logger->log("TYPO3 Navigation Link Checker started");
+
+
         $db = new DatabaseConnection($config);
-
         $siteRepo = new SiteRepository($config);
-
         $pageRepo = new PageRepository($db);
-
         $crawler = new PageCrawler();
-
         $checker = new NavigationLinkChecker();
-
         $cacheManager = new Typo3CacheManager($config);
-
         $mailer = new Mailer($config);
 
 
@@ -41,7 +38,7 @@ class Application
 
         if (!$sites) {
 
-            echo "No sites found.\n";
+            $logger->log("No sites found.");
             return;
 
         }
@@ -51,13 +48,13 @@ class Application
 
         foreach ($sites as $site) {
 
-            echo "Checking site: " . $site['base'] . "\n";
+            $logger->log("Checking site: " . $site['base']);
 
             $pages = $pageRepo->getPagesByRoot($site['rootPageId']);
 
             $total = count($pages);
 
-            echo "Found $total pages\n\n";
+            $logger->log("Found $total pages");
 
             $i = 1;
 
@@ -65,13 +62,13 @@ class Application
 
                 $url = rtrim($site['base'], '/') . '/' . ltrim($page['slug'], '/');
 
-                echo "[$i/$total] $url\n";
+                $logger->log("[$i/$total] $url");
 
                 $html = $crawler->fetch($url);
 
                 if ($checker->hasInvalidLink($html)) {
 
-                    echo "   → INVALID LINK FOUND\n";
+                    $logger->log("INVALID LINK FOUND");
 
                     $invalidPages[] = $url;
 
@@ -81,34 +78,32 @@ class Application
 
             }
 
-            echo "\n";
-
         }
 
 
         if (!empty($invalidPages)) {
 
-            echo "---------------------------------\n";
-            echo "Invalid links found: " . count($invalidPages) . "\n";
-            echo "Flushing TYPO3 cache...\n";
+            $logger->log("Invalid links found: " . count($invalidPages));
+
+            $logger->log("Flushing TYPO3 cache");
 
             $cacheManager->flush();
 
             sleep(5);
 
-            echo "Rechecking pages...\n\n";
+            $logger->log("Rechecking pages");
 
             $stillBroken = [];
 
             foreach ($invalidPages as $url) {
 
-                echo "Recheck: $url\n";
+                $logger->log("Recheck: $url");
 
                 $html = $crawler->fetch($url);
 
                 if ($checker->hasInvalidLink($html)) {
 
-                    echo "   → STILL INVALID\n";
+                    $logger->log("STILL INVALID");
 
                     $stillBroken[] = $url;
 
@@ -116,28 +111,27 @@ class Application
 
             }
 
-
             if (!empty($stillBroken)) {
 
-                echo "\nErrors remain after cache flush\n";
+                $logger->log("Errors remain after cache flush");
 
                 $mailer->send($stillBroken);
 
-                echo "Mail sent.\n";
+                $logger->log("Mail sent");
 
             } else {
 
-                echo "\nErrors disappeared after cache flush.\n";
+                $logger->log("Errors disappeared after cache flush");
 
             }
 
         } else {
 
-            echo "No invalid navigation links found.\n";
+            $logger->log("No invalid navigation links found");
 
         }
 
-        echo "\nFinished.\n\n";
+        $logger->log("Finished");
 
     }
 

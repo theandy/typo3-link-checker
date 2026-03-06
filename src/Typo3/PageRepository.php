@@ -17,11 +17,20 @@ class PageRepository
     public function getPagesByRoot(int $rootId): array
     {
 
+        $pageIds = $this->getTreePageIds($rootId);
+
+        if (empty($pageIds)) {
+            return [];
+        }
+
+        $idList = implode(',', $pageIds);
+
         $sql = "
             SELECT uid, slug
             FROM pages
             WHERE
-                deleted = 0
+                uid IN ($idList)
+                AND deleted = 0
                 AND hidden = 0
                 AND doktype = 1
         ";
@@ -39,6 +48,44 @@ class PageRepository
         }
 
         return $pages;
+
+    }
+
+    private function getTreePageIds(int $rootId): array
+    {
+
+        $ids = [$rootId];
+        $queue = [$rootId];
+
+        while (!empty($queue)) {
+
+            $pid = array_shift($queue);
+
+            $sql = "
+                SELECT uid
+                FROM pages
+                WHERE
+                    pid = $pid
+                    AND deleted = 0
+            ";
+
+            $result = $this->conn->query($sql);
+
+            if (!$result) {
+                continue;
+            }
+
+            while ($row = $result->fetch_assoc()) {
+
+                $ids[] = $row['uid'];
+                $queue[] = $row['uid'];
+
+            }
+
+        }
+
+        return $ids;
+
     }
 
 }

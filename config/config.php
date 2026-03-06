@@ -16,6 +16,10 @@ return [
     'mail' => [
         'to' => 'admin@example.com',
         'from' => 'monitor@example.com'
+    ],
+
+    'log' => [
+        'file' => __DIR__ . '/../logs/link-checker.log'
     ]
 
 ];
