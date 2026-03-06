@@ -5,45 +5,69 @@ namespace LinkChecker\Infrastructure;
 class Logger
 {
 
-    private string $logFile;
-    private bool $overwrite;
+    private string $file;
 
-    public function __construct(string $logFile, bool $overwrite = false)
+    public function __construct(string $file, bool $overwrite = false)
     {
 
-        $this->logFile = $logFile;
-        $this->overwrite = $overwrite;
+        $this->file = $file;
 
-        $dir = dirname($logFile);
+        $dir = dirname($file);
 
         if (!is_dir($dir)) {
-
-            if (!mkdir($dir, 0775, true) && !is_dir($dir)) {
-                throw new \RuntimeException("Cannot create log directory: " . $dir);
-            }
-
+            mkdir($dir, 0777, true);
         }
 
         if ($overwrite) {
-            file_put_contents($this->logFile, '');
+            file_put_contents($file, '');
         }
 
     }
 
-    public function log(string $message): void
+    public function info(string $message): void
+    {
+        $this->write('INFO', $message, "\033[0m");
+    }
+
+    public function warn(string $message): void
+    {
+        $this->write('WARN', $message, "\033[33m");
+    }
+
+    public function error(string $message): void
+    {
+        $this->write('ERROR', $message, "\033[31m");
+    }
+
+    public function success(string $message): void
+    {
+        $this->write('OK', $message, "\033[32m");
+    }
+
+    private function write(string $level, string $message, string $color): void
     {
 
-        $time = date('Y-m-d H:i:s');
+        $timestamp = date('Y-m-d H:i:s');
 
-        $line = "[$time] " . $message;
+        $line = "[$timestamp] [$level] $message";
 
-        echo $line . PHP_EOL;
+        /*
+        Logdatei (ohne Farbe)
+        */
 
         file_put_contents(
-            $this->logFile,
+            $this->file,
             $line . PHP_EOL,
             FILE_APPEND
         );
+
+        /*
+        Konsole (mit Farbe)
+        */
+
+        $reset = "\033[0m";
+
+        echo $color . $line . $reset . PHP_EOL;
 
     }
 

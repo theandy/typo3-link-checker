@@ -15,7 +15,7 @@ class PageCrawler
     {
 
         $this->client = new Client([
-            'timeout' => 5,
+            'timeout' => 8,
             'connect_timeout' => 3,
             'verify' => false,
             'headers' => [
@@ -42,13 +42,13 @@ class PageCrawler
 
                 $html = (string)$response->getBody();
 
-                $callback($urls[$index], $html, null);
+                $callback($urls[$index], $html, null, $index);
 
             },
 
             'rejected' => function ($reason, $index) use ($urls, $callback) {
 
-                $callback($urls[$index], '', $reason);
+                $callback($urls[$index], '', $reason, $index);
 
             }
 

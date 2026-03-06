@@ -67,7 +67,7 @@ class Application
             $siteLinkCount = 0;
             $siteInvalidCount = 0;
 
-            $crawler->fetchMultiple($urls, function ($url, $html, $error, $index = null) use (
+            $crawler->fetchMultiple($urls, function ($url, $html, $error, $index) use (
                 $checker,
                 &$siteLinkCount,
                 &$siteInvalidCount,
@@ -77,15 +77,16 @@ class Application
                 $total
             ) {
 
-                $pos = $index !== null ? $index + 1 : "?";
+                $pos = $index + 1;
 
                 $logger->log("[$pos/$total] $url");
 
                 if ($error) {
 
-                    $reason = (string)$error;
+                    $reason = $this->normalizeError($error);
 
-                    $logger->log("ERROR loading page: $reason");
+                    $logger->log("ERROR loading page");
+                    $logger->log("Reason: $reason");
 
                     $failedPages[$url] = $reason;
 
@@ -116,60 +117,6 @@ class Application
 
         }
 
-        /*
-        CACHE FLUSH + RECHECK
-        */
-
-        if (!empty($invalidPages)) {
-
-            $logger->log("Invalid pages found: " . count($invalidPages));
-
-            $logger->log("Flushing TYPO3 cache");
-
-            $cacheManager->flush();
-
-            sleep(5);
-
-            $stillBroken = [];
-
-            $crawler->fetchMultiple(array_keys($invalidPages), function ($url, $html) use (
-                $checker,
-                &$stillBroken,
-                $logger
-            ) {
-
-                $logger->log("Rechecking page: $url");
-
-                if ($checker->countInvalidLinks($html) > 0) {
-
-                    $logger->log("STILL INVALID");
-
-                    $stillBroken[] = $url;
-
-                }
-
-            });
-
-            if (!empty($stillBroken)) {
-
-                $logger->log("Errors remain after cache flush");
-
-                $mailer->send($stillBroken);
-
-                $logger->log("Mail sent");
-
-            } else {
-
-                $logger->log("Errors disappeared after cache flush");
-
-            }
-
-        }
-
-        /*
-        SUMMARY
-        */
-
         $logger->log("");
         $logger->log("===== SUMMARY =====");
 
@@ -179,7 +126,7 @@ class Application
 
             foreach ($invalidPages as $url => $count) {
 
-                $logger->log("$url  (invalid links: $count)");
+                $logger->log("$url (invalid links: $count)");
 
             }
 
@@ -199,7 +146,6 @@ class Application
 
                 $logger->log("$url");
                 $logger->log("Reason: $reason");
-                $logger->log("");
 
             }
 
@@ -212,6 +158,31 @@ class Application
         $logger->log("===== END SUMMARY =====");
 
         $logger->log("Finished");
+
+    }
+
+    private function normalizeError($error): string
+    {
+
+        $msg = $error->getMessage() ?? '';
+
+        if (str_contains($msg, 'cURL error 28')) {
+            return 'Timeout after 8 seconds';
+        }
+
+        if (str_contains($msg, 'Could not resolve host')) {
+            return 'DNS lookup failed';
+        }
+
+        if (str_contains($msg, 'Connection refused')) {
+            return 'Connection refused';
+        }
+
+        if (preg_match('/([0-9]{3})/', $msg, $m)) {
+            return 'HTTP ' . $m[1];
+        }
+
+        return $msg;
 
     }
 
