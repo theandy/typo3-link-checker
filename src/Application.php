@@ -20,7 +20,10 @@ class Application
 
         $config = new Config();
 
-        $logger = new Logger($config->get('log')['file']);
+        $logger = new Logger(
+            $config->get('log')['file'],
+            $config->get('log')['overwrite']
+        );
 
         $logger->log("TYPO3 Navigation Link Checker started");
 

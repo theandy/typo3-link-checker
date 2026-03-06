@@ -6,11 +6,13 @@ class Logger
 {
 
     private string $logFile;
+    private bool $overwrite;
 
-    public function __construct(string $logFile)
+    public function __construct(string $logFile, bool $overwrite = false)
     {
 
         $this->logFile = $logFile;
+        $this->overwrite = $overwrite;
 
         $dir = dirname($logFile);
 
@@ -22,8 +24,8 @@ class Logger
 
         }
 
-        if (!file_exists($logFile)) {
-            touch($logFile);
+        if ($overwrite) {
+            file_put_contents($this->logFile, '');
         }
 
     }

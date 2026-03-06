@@ -25,8 +25,16 @@ class NavigationLinkChecker
             return 0;
         }
 
+        /*
+         * erkennt:
+         *
+         * <!-- navigation-link-href:'' -->
+         * <!-- navigation-link-href: '' -->
+         * <!--navigation-link-href:''-->
+         */
+
         preg_match_all(
-            '/<!--\s*navigation-link-href:\s*[\'"]\s*[\'"]\s*-->/i',
+            '/navigation-link-href:\s*[\'"]\s*[\'"]/',
             $html,
             $matches
         );
