@@ -24,10 +24,46 @@ class SiteRepository
 
             $yaml = Yaml::parseFile($file);
 
+            if (!isset($yaml['base'])) {
+                continue;
+            }
+
+            $base = rtrim($yaml['base'], '/');
+            $rootPageId = $yaml['rootPageId'] ?? 0;
+
+            if (!$rootPageId) {
+                continue;
+            }
+
+            /*
+             * Default Sprache
+             */
+
             $sites[] = [
-                'base' => $yaml['base'],
-                'rootPageId' => $yaml['rootPageId']
+                'base' => $base,
+                'rootPageId' => $rootPageId
             ];
+
+            /*
+             * Weitere Sprachen
+             */
+
+            if (!empty($yaml['languages'])) {
+
+                foreach ($yaml['languages'] as $language) {
+
+                    if (!empty($language['base'])) {
+
+                        $langBase = trim($language['base'], '/');
+
+                        $sites[] = [
+                            'base' => $base . '/' . $langBase,
+                            'rootPageId' => $rootPageId
+                        ];
+                    }
+                }
+
+            }
 
         }
 
