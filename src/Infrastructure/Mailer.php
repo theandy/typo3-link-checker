@@ -9,7 +9,7 @@ class Mailer
 {
 
     private array $config;
-    private array $typo3Mail;
+    private array $typo3Mail = [];
 
     public function __construct(Config $config)
     {
@@ -20,15 +20,36 @@ class Mailer
     private function loadTypo3MailConfig(Config $config): array
     {
 
-        $settingsFile = rtrim($config->get('typo3')['root_path'], '/') . '/config/system/settings.php';
+        $root = rtrim($config->get('typo3')['root_path'], '/');
 
-        if (!file_exists($settingsFile)) {
-            throw new \RuntimeException('TYPO3 settings.php not found');
+        $possibleFiles = [
+
+            $root . '/config/system/settings.php',           // TYPO3 v12+
+            $root . '/typo3conf/system/settings.php',        // ältere composer installs
+            $root . '/typo3conf/LocalConfiguration.php'      // klassische installs
+
+        ];
+
+        foreach ($possibleFiles as $file) {
+
+            if (file_exists($file)) {
+
+                $settings = require $file;
+
+                if (isset($settings['MAIL'])) {
+                    return $settings['MAIL'];
+                }
+
+            }
+
         }
 
-        $settings = require $settingsFile;
+        /*
+         * Falls keine TYPO3 Config gefunden wurde,
+         * einfach leere Konfiguration zurückgeben
+         */
 
-        return $settings['MAIL'] ?? [];
+        return [];
 
     }
 
@@ -38,7 +59,7 @@ class Mailer
         $mail = new PHPMailer(true);
 
         /*
-         * TYPO3 Mail Transport
+         * SMTP Konfiguration aus TYPO3
          */
 
         if (($this->typo3Mail['transport'] ?? '') === 'smtp') {
