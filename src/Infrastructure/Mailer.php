@@ -25,17 +25,17 @@ class Mailer
 
         $root = rtrim($config->get('typo3')['root_path'], '/');
 
-        $possibleFiles = [
+        $files = [
             $root . '/config/system/settings.php',
             $root . '/typo3conf/system/settings.php',
             $root . '/typo3conf/LocalConfiguration.php'
         ];
 
-        foreach ($possibleFiles as $file) {
+        foreach ($files as $file) {
 
             if (file_exists($file)) {
 
-                $this->logger->log("Loading TYPO3 mail config from: " . $file);
+                $this->logger->log("Loading TYPO3 mail config from: $file");
 
                 $settings = require $file;
 
@@ -43,11 +43,15 @@ class Mailer
                     return $settings['MAIL'];
                 }
 
+                if (isset($settings['TYPO3_CONF_VARS']['MAIL'])) {
+                    return $settings['TYPO3_CONF_VARS']['MAIL'];
+                }
+
             }
 
         }
 
-        $this->logger->log("No TYPO3 mail configuration found.");
+        $this->logger->log("No TYPO3 mail configuration found");
 
         return [];
 
@@ -60,9 +64,6 @@ class Mailer
 
             $mail = new PHPMailer(true);
 
-            /*
-             * Debug Output von PHPMailer ins Log
-             */
             $mail->SMTPDebug = 2;
             $mail->Debugoutput = function ($str) {
                 $this->logger->log("SMTP: " . trim($str));
@@ -85,8 +86,6 @@ class Mailer
                     $port = 25;
                 }
 
-                $this->logger->log("SMTP server: $host:$port");
-
                 $mail->Host = $host;
                 $mail->Port = (int)$port;
 
@@ -94,7 +93,8 @@ class Mailer
                 $mail->Username = $this->typo3Mail['transport_smtp_username'] ?? '';
                 $mail->Password = $this->typo3Mail['transport_smtp_password'] ?? '';
 
-                $this->logger->log("SMTP user: " . ($mail->Username ?: 'none'));
+                $this->logger->log("SMTP server: $host:$port");
+                $this->logger->log("SMTP user: " . $mail->Username);
 
             } else {
 
@@ -103,23 +103,27 @@ class Mailer
             }
 
             /*
-             * Absender
+             * TYPO3 Default From
              */
 
-            $fromAddress = $this->typo3Mail['defaultMailFromAddress'] ?? 'noreply@example.com';
-            $fromName = $this->typo3Mail['defaultMailFromName'] ?? 'TYPO3';
+            $fromAddress = $this->typo3Mail['defaultMailFromAddress'] ?? '';
+            $fromName = $this->typo3Mail['defaultMailFromName'] ?? '';
 
-            $this->logger->log("Mail from: $fromAddress ($fromName)");
+            if (!$fromAddress) {
+                throw new \RuntimeException("No defaultMailFromAddress configured in TYPO3");
+            }
 
             $mail->setFrom($fromAddress, $fromName);
+
+            $this->logger->log("Mail from: $fromAddress ($fromName)");
 
             /*
              * Empfänger
              */
 
-            $this->logger->log("Mail to: " . $this->config['to']);
-
             $mail->addAddress($this->config['to']);
+
+            $this->logger->log("Mail to: " . $this->config['to']);
 
             $mail->Subject = 'TYPO3 Navigation Fehler gefunden';
 
