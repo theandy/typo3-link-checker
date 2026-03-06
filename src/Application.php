@@ -38,6 +38,7 @@ class Application
         $sites = $siteRepo->getSites();
 
         $invalidPages = [];
+        $failedPages = [];
 
         foreach ($sites as $site) {
 
@@ -71,20 +72,22 @@ class Application
                 &$siteLinkCount,
                 &$siteInvalidCount,
                 &$invalidPages,
+                &$failedPages,
                 $logger,
                 $total
             ) {
 
-                if ($index !== null) {
-                    $pos = $index + 1;
-                    $logger->log("[$pos/$total] $url");
-                } else {
-                    $logger->log("Checking page: $url");
-                }
+                $pos = $index !== null ? $index + 1 : "?";
+
+                $logger->log("[$pos/$total] $url");
 
                 if ($error) {
 
-                    $logger->log("ERROR loading page");
+                    $reason = (string)$error;
+
+                    $logger->log("ERROR loading page: $reason");
+
+                    $failedPages[$url] = $reason;
 
                     return;
 
@@ -102,7 +105,7 @@ class Application
 
                     $logger->log("INVALID LINK FOUND ($invalidCount)");
 
-                    $invalidPages[] = $url;
+                    $invalidPages[$url] = $invalidCount;
 
                 }
 
@@ -112,6 +115,10 @@ class Application
             $logger->log("Invalid navigation links: $siteInvalidCount");
 
         }
+
+        /*
+        CACHE FLUSH + RECHECK
+        */
 
         if (!empty($invalidPages)) {
 
@@ -125,7 +132,7 @@ class Application
 
             $stillBroken = [];
 
-            $crawler->fetchMultiple($invalidPages, function ($url, $html) use (
+            $crawler->fetchMultiple(array_keys($invalidPages), function ($url, $html) use (
                 $checker,
                 &$stillBroken,
                 $logger
@@ -157,11 +164,52 @@ class Application
 
             }
 
+        }
+
+        /*
+        SUMMARY
+        */
+
+        $logger->log("");
+        $logger->log("===== SUMMARY =====");
+
+        if (!empty($invalidPages)) {
+
+            $logger->log("Pages with invalid navigation links:");
+
+            foreach ($invalidPages as $url => $count) {
+
+                $logger->log("$url  (invalid links: $count)");
+
+            }
+
         } else {
 
-            $logger->log("No invalid navigation links found");
+            $logger->log("No invalid navigation links found.");
 
         }
+
+        $logger->log("");
+
+        if (!empty($failedPages)) {
+
+            $logger->log("Pages that could not be loaded:");
+
+            foreach ($failedPages as $url => $reason) {
+
+                $logger->log("$url");
+                $logger->log("Reason: $reason");
+                $logger->log("");
+
+            }
+
+        } else {
+
+            $logger->log("All pages could be loaded successfully.");
+
+        }
+
+        $logger->log("===== END SUMMARY =====");
 
         $logger->log("Finished");
 
