@@ -19,48 +19,51 @@ class SiteRepository
     {
 
         $sites = [];
+        $seen = [];
 
         foreach (glob($this->sitesPath . '*/config.yaml') as $file) {
 
             $yaml = Yaml::parseFile($file);
 
-            if (!isset($yaml['base'])) {
+            if (empty($yaml['base']) || empty($yaml['rootPageId'])) {
                 continue;
             }
 
-            $base = rtrim($yaml['base'], '/');
-            $rootPageId = $yaml['rootPageId'] ?? 0;
+            $siteBase = rtrim($yaml['base'], '/');
+            $rootPageId = (int)$yaml['rootPageId'];
 
-            if (!$rootPageId) {
+            if (empty($yaml['languages'])) {
                 continue;
             }
 
-            /*
-             * Default Sprache
-             */
+            foreach ($yaml['languages'] as $language) {
 
-            $sites[] = [
-                'base' => $base,
-                'rootPageId' => $rootPageId
-            ];
+                $languageId = (int)($language['languageId'] ?? 0);
 
-            /*
-             * Weitere Sprachen
-             */
+                $langBase = $language['base'] ?? '/';
 
-            if (!empty($yaml['languages'])) {
+                $langBase = trim($langBase, '/');
 
-                foreach ($yaml['languages'] as $language) {
+                if ($langBase === '') {
+                    $base = $siteBase;
+                } else {
+                    $base = $siteBase . '/' . $langBase;
+                }
 
-                    if (!empty($language['base'])) {
+                $base = rtrim($base, '/');
 
-                        $langBase = trim($language['base'], '/');
+                $key = $base . '_' . $languageId;
 
-                        $sites[] = [
-                            'base' => $base . '/' . $langBase,
-                            'rootPageId' => $rootPageId
-                        ];
-                    }
+                if (!isset($seen[$key])) {
+
+                    $sites[] = [
+                        'base' => $base,
+                        'rootPageId' => $rootPageId,
+                        'languageId' => $languageId
+                    ];
+
+                    $seen[$key] = true;
+
                 }
 
             }

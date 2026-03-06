@@ -50,7 +50,10 @@ class Application
 
             $logger->log("Checking site: " . $site['base']);
 
-            $pages = $pageRepo->getPagesByRoot($site['rootPageId']);
+            $pages = $pageRepo->getPagesByRoot(
+                $site['rootPageId'],
+                $site['languageId']
+            );
 
             $total = count($pages);
 

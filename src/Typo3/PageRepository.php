@@ -14,7 +14,7 @@ class PageRepository
         $this->conn = $db->getConnection();
     }
 
-    public function getPagesByRoot(int $rootId): array
+    public function getPagesByRoot(int $rootId, int $languageId): array
     {
 
         $pageIds = $this->getTreePageIds($rootId);
@@ -30,6 +30,7 @@ class PageRepository
             FROM pages
             WHERE
                 uid IN ($idList)
+                AND sys_language_uid = $languageId
                 AND deleted = 0
                 AND hidden = 0
                 AND doktype = 1
