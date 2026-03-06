@@ -7,7 +7,7 @@ use LinkChecker\Infrastructure\DatabaseConnection;
 class PageRepository
 {
 
-    private $conn;
+    private \mysqli $conn;
 
     public function __construct(DatabaseConnection $db)
     {
@@ -26,8 +26,19 @@ class PageRepository
                 AND doktype = 1
         ";
 
-        return $this->conn->fetchAllAssociative($sql);
+        $result = $this->conn->query($sql);
 
+        if (!$result) {
+            throw new \RuntimeException('SQL Error: ' . $this->conn->error);
+        }
+
+        $pages = [];
+
+        while ($row = $result->fetch_assoc()) {
+            $pages[] = $row;
+        }
+
+        return $pages;
     }
 
 }

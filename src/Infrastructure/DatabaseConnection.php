@@ -2,32 +2,35 @@
 
 namespace LinkChecker\Infrastructure;
 
-use Doctrine\DBAL\DriverManager;
 use LinkChecker\Config\Config;
 
 class DatabaseConnection
 {
 
-    private $connection;
+    private \mysqli $connection;
 
     public function __construct(Config $config)
     {
-
         $db = $config->get('database');
 
-        $this->connection = DriverManager::getConnection([
-            'dbname' => $db['dbname'],
-            'user' => $db['user'],
-            'password' => $db['password'],
-            'host' => $db['host'],
-            'driver' => 'pdo_mysql'
-        ]);
+        $this->connection = new \mysqli(
+            $db['host'],
+            $db['user'],
+            $db['password'],
+            $db['dbname']
+        );
 
+        if ($this->connection->connect_error) {
+            throw new \RuntimeException(
+                'MySQL connection failed: ' . $this->connection->connect_error
+            );
+        }
+
+        $this->connection->set_charset('utf8mb4');
     }
 
-    public function getConnection()
+    public function getConnection(): \mysqli
     {
         return $this->connection;
     }
-
 }
