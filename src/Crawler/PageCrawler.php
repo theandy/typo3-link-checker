@@ -42,13 +42,13 @@ class PageCrawler
 
                 $html = (string)$response->getBody();
 
-                $callback($urls[$index], $html, $index);
+                $callback($urls[$index], $html, null);
 
             },
 
             'rejected' => function ($reason, $index) use ($urls, $callback) {
 
-                $callback($urls[$index], '', $index);
+                $callback($urls[$index], '', $reason);
 
             }
 

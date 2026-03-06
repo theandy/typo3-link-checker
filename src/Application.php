@@ -59,28 +59,48 @@ class Application
 
             }
 
-            $logger->log("Found " . count($urls) . " pages");
+            $total = count($urls);
+
+            $logger->log("Found $total pages");
 
             $siteLinkCount = 0;
             $siteInvalidCount = 0;
 
-            $crawler->fetchMultiple($urls, function ($url, $html) use (
+            $crawler->fetchMultiple($urls, function ($url, $html, $error, $index = null) use (
                 $checker,
                 &$siteLinkCount,
                 &$siteInvalidCount,
                 &$invalidPages,
-                $logger
+                $logger,
+                $total
             ) {
+
+                if ($index !== null) {
+                    $pos = $index + 1;
+                    $logger->log("[$pos/$total] $url");
+                } else {
+                    $logger->log("Checking page: $url");
+                }
+
+                if ($error) {
+
+                    $logger->log("ERROR loading page");
+
+                    return;
+
+                }
 
                 $linkCount = $checker->countNavigationLinks($html);
                 $invalidCount = $checker->countInvalidLinks($html);
+
+                $logger->log("Navigation markers: $linkCount");
 
                 $siteLinkCount += $linkCount;
                 $siteInvalidCount += $invalidCount;
 
                 if ($invalidCount > 0) {
 
-                    $logger->log("INVALID LINK FOUND on $url ($invalidCount)");
+                    $logger->log("INVALID LINK FOUND ($invalidCount)");
 
                     $invalidPages[] = $url;
 
@@ -103,7 +123,7 @@ class Application
 
             sleep(5);
 
-            $logger->log("Rechecking pages");
+            $stillBroken = [];
 
             $crawler->fetchMultiple($invalidPages, function ($url, $html) use (
                 $checker,
@@ -111,9 +131,11 @@ class Application
                 $logger
             ) {
 
+                $logger->log("Rechecking page: $url");
+
                 if ($checker->countInvalidLinks($html) > 0) {
 
-                    $logger->log("STILL INVALID: $url");
+                    $logger->log("STILL INVALID");
 
                     $stillBroken[] = $url;
 
