@@ -7,6 +7,7 @@ use LinkChecker\Infrastructure\DatabaseConnection;
 use LinkChecker\Infrastructure\Mailer;
 use LinkChecker\Infrastructure\Typo3CacheManager;
 use LinkChecker\Infrastructure\Logger;
+use LinkChecker\Infrastructure\ProgressBar;
 use LinkChecker\Typo3\SiteRepository;
 use LinkChecker\Typo3\PageRepository;
 use LinkChecker\Crawler\PageCrawler;
@@ -14,10 +15,8 @@ use LinkChecker\Checker\NavigationLinkChecker;
 
 class Application
 {
-
     public function run(): void
     {
-
         $config = new Config();
 
         $logger = new Logger(
@@ -25,7 +24,7 @@ class Application
             $config->get('log')['overwrite']
         );
 
-        $logger->log("TYPO3 Navigation Link Checker started");
+        $logger->info("TYPO3 Navigation Link Checker started");
 
         $db = new DatabaseConnection($config);
         $siteRepo = new SiteRepository($config);
@@ -42,7 +41,7 @@ class Application
 
         foreach ($sites as $site) {
 
-            $logger->log("Checking site: " . $site['base']);
+            $logger->info("Checking site: " . $site['base']);
 
             $pages = $pageRepo->getPagesByRoot(
                 $site['rootPageId'],
@@ -62,7 +61,9 @@ class Application
 
             $total = count($urls);
 
-            $logger->log("Found $total pages");
+            $logger->info("Found $total pages");
+
+            $progress = new ProgressBar($total);
 
             $siteLinkCount = 0;
             $siteInvalidCount = 0;
@@ -74,96 +75,89 @@ class Application
                 &$invalidPages,
                 &$failedPages,
                 $logger,
-                $total
+                $total,
+                $progress
             ) {
 
                 $pos = $index + 1;
 
-                $logger->log("[$pos/$total] $url");
+                $logger->info("[$pos/$total] $url");
 
                 if ($error) {
 
                     $reason = $this->normalizeError($error);
 
-                    $logger->log("ERROR loading page");
-                    $logger->log("Reason: $reason");
+                    $logger->error("ERROR loading page");
+                    $logger->error("Reason: $reason");
 
                     $failedPages[$url] = $reason;
 
+                    $progress->advance();
                     return;
-
                 }
 
                 $linkCount = $checker->countNavigationLinks($html);
                 $invalidCount = $checker->countInvalidLinks($html);
 
-                $logger->log("Navigation markers: $linkCount");
+                $logger->info("Navigation markers: $linkCount");
 
                 $siteLinkCount += $linkCount;
                 $siteInvalidCount += $invalidCount;
 
                 if ($invalidCount > 0) {
 
-                    $logger->log("INVALID LINK FOUND ($invalidCount)");
+                    $logger->warn("INVALID LINK FOUND ($invalidCount)");
 
                     $invalidPages[$url] = $invalidCount;
-
                 }
 
+                $progress->advance();
             });
 
-            $logger->log("Navigation links found: $siteLinkCount");
-            $logger->log("Invalid navigation links: $siteInvalidCount");
-
+            $logger->info("Navigation links found: $siteLinkCount");
+            $logger->info("Invalid navigation links: $siteInvalidCount");
         }
 
-        $logger->log("");
-        $logger->log("===== SUMMARY =====");
+        $logger->info("");
+        $logger->info("===== SUMMARY =====");
 
         if (!empty($invalidPages)) {
 
-            $logger->log("Pages with invalid navigation links:");
+            $logger->warn("Pages with invalid navigation links:");
 
             foreach ($invalidPages as $url => $count) {
-
-                $logger->log("$url (invalid links: $count)");
-
+                $logger->warn("$url (invalid links: $count)");
             }
 
         } else {
 
-            $logger->log("No invalid navigation links found.");
-
+            $logger->success("No invalid navigation links found.");
         }
 
-        $logger->log("");
+        $logger->info("");
 
         if (!empty($failedPages)) {
 
-            $logger->log("Pages that could not be loaded:");
+            $logger->error("Pages that could not be loaded:");
 
             foreach ($failedPages as $url => $reason) {
 
-                $logger->log("$url");
-                $logger->log("Reason: $reason");
-
+                $logger->error($url);
+                $logger->error("Reason: $reason");
             }
 
         } else {
 
-            $logger->log("All pages could be loaded successfully.");
-
+            $logger->success("All pages could be loaded successfully.");
         }
 
-        $logger->log("===== END SUMMARY =====");
+        $logger->info("===== END SUMMARY =====");
 
-        $logger->log("Finished");
-
+        $logger->success("Finished");
     }
 
     private function normalizeError($error): string
     {
-
         $msg = $error->getMessage() ?? '';
 
         if (str_contains($msg, 'cURL error 28')) {
@@ -183,7 +177,5 @@ class Application
         }
 
         return $msg;
-
     }
-
 }

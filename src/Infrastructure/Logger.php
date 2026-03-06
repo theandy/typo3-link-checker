@@ -4,12 +4,10 @@ namespace LinkChecker\Infrastructure;
 
 class Logger
 {
-
     private string $file;
 
     public function __construct(string $file, bool $overwrite = false)
     {
-
         $this->file = $file;
 
         $dir = dirname($file);
@@ -21,16 +19,6 @@ class Logger
         if ($overwrite) {
             file_put_contents($file, '');
         }
-
-    }
-
-    /*
-    Standard Log (kompatibel mit bestehendem Code)
-    */
-
-    public function log(string $message): void
-    {
-        $this->write('INFO', $message, "\033[0m");
     }
 
     public function info(string $message): void
@@ -55,14 +43,9 @@ class Logger
 
     private function write(string $level, string $message, string $color): void
     {
-
         $timestamp = date('Y-m-d H:i:s');
 
         $line = "[$timestamp] [$level] $message";
-
-        /*
-        Logdatei
-        */
 
         file_put_contents(
             $this->file,
@@ -70,14 +53,8 @@ class Logger
             FILE_APPEND
         );
 
-        /*
-        Konsole (farbig)
-        */
-
         $reset = "\033[0m";
 
         echo $color . $line . $reset . PHP_EOL;
-
     }
-
 }
