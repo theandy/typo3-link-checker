@@ -17,6 +17,7 @@ use Symfony\Component\Console\Output\ConsoleOutput;
 
 class Application
 {
+
     public function run(): void
     {
 
@@ -84,6 +85,15 @@ class Application
                 $progress
             ) {
 
+                /*
+                 ProgressBar kurz entfernen,
+                 damit Log-Ausgabe sichtbar bleibt
+                */
+
+                $progress->clear();
+
+                $logger->info("Checking page: $url");
+
                 if ($error) {
 
                     $reason = $this->normalizeError($error);
@@ -94,6 +104,8 @@ class Application
                     $failedPages[$url] = $reason;
 
                     $progress->advance();
+                    $progress->display();
+
                     return;
 
                 }
@@ -101,18 +113,21 @@ class Application
                 $linkCount = $checker->countNavigationLinks($html);
                 $invalidCount = $checker->countInvalidLinks($html);
 
+                $logger->info("Navigation markers: $linkCount");
+
                 $siteLinkCount += $linkCount;
                 $siteInvalidCount += $invalidCount;
 
                 if ($invalidCount > 0) {
 
-                    $logger->warn("INVALID LINK FOUND ($invalidCount) on $url");
+                    $logger->warn("INVALID LINK FOUND ($invalidCount)");
 
                     $invalidPages[$url] = $invalidCount;
 
                 }
 
                 $progress->advance();
+                $progress->display();
 
             });
 
