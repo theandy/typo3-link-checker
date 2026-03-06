@@ -1,7 +1,19 @@
 <?php
-/**
- * Project: typo3-link-checker
- * File: NavigationLinkChecker.php
- * Author: WSM
- * Date: 06.03.2026
- */
+
+namespace LinkChecker\Checker;
+
+class NavigationLinkChecker
+{
+
+    public function hasInvalidLink(string $html): bool
+    {
+
+        if (!$html) {
+            return false;
+        }
+
+        return preg_match("/navigation-link-href:'\\s*'/", $html) === 1;
+
+    }
+
+}
