@@ -24,6 +24,15 @@ class Logger
 
     }
 
+    /*
+    Standard Log (kompatibel mit bestehendem Code)
+    */
+
+    public function log(string $message): void
+    {
+        $this->write('INFO', $message, "\033[0m");
+    }
+
     public function info(string $message): void
     {
         $this->write('INFO', $message, "\033[0m");
@@ -52,7 +61,7 @@ class Logger
         $line = "[$timestamp] [$level] $message";
 
         /*
-        Logdatei (ohne Farbe)
+        Logdatei
         */
 
         file_put_contents(
@@ -62,7 +71,7 @@ class Logger
         );
 
         /*
-        Konsole (mit Farbe)
+        Konsole (farbig)
         */
 
         $reset = "\033[0m";
