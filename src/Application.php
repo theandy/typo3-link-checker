@@ -33,7 +33,9 @@ class Application
         $crawler = new PageCrawler();
         $checker = new NavigationLinkChecker();
         $cacheManager = new Typo3CacheManager($config);
-        $mailer = new Mailer($config);
+
+        // HIER war der Fehler
+        $mailer = new Mailer($config, $logger);
 
         $sites = $siteRepo->getSites();
 
