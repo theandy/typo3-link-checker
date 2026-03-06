@@ -1,14 +1,14 @@
 # TYPO3 Navigation Link Checker
 
-A small PHP CLI tool that scans TYPO3 websites for invalid navigation
-links marked in the HTML with:
+A PHP CLI tool that scans TYPO3 websites for invalid navigation links
+rendered in HTML comments such as:
 
 ```{=html}
 <!-- navigation-link-href:'' -->
 ```
-The tool crawls all pages of each TYPO3 site and language, detects empty
-navigation links, optionally flushes the TYPO3 cache, and sends a
-notification email if problems remain.
+The tool crawls all pages of every TYPO3 site and language, detects
+empty navigation links, optionally flushes the TYPO3 cache, and sends a
+notification email if the issue remains.
 
 ------------------------------------------------------------------------
 
@@ -23,15 +23,26 @@ notification email if problems remain.
 -   Sends notification emails
 -   Writes detailed logs
 -   CLI compatible (cronjobs)
+-   Progress bar during crawling
+-   Colored console output for warnings and errors
 
 ------------------------------------------------------------------------
 
 # Requirements
 
--   PHP 8.1 or higher
+-   PHP **8.1 or higher**
 -   Composer
 -   Access to the TYPO3 installation
 -   SMTP account for sending emails
+
+Required PHP extensions:
+
+-   curl
+-   json
+-   mbstring
+-   openssl
+-   dom
+-   libxml
 
 ------------------------------------------------------------------------
 
@@ -49,6 +60,33 @@ Install dependencies:
 ``` bash
 composer install
 ```
+
+Optimize autoload (recommended):
+
+``` bash
+composer dump-autoload -o
+```
+
+Make the CLI script executable:
+
+``` bash
+chmod +x bin/check-links
+```
+
+------------------------------------------------------------------------
+
+# Directory Setup
+
+Create the log directory if it does not exist:
+
+``` bash
+mkdir logs
+chmod 775 logs
+```
+
+The application will write logs to:
+
+    logs/link-checker.log
 
 ------------------------------------------------------------------------
 
@@ -101,17 +139,15 @@ return [
 
 ------------------------------------------------------------------------
 
-# Log Configuration
+# Navigation Marker Format
 
-    'overwrite' => true
+Valid navigation marker:
 
-true → overwrite log file on every run (recommended for debugging)
+    <!-- navigation-link-href:'/products' -->
 
-false → append to existing log
+Invalid navigation marker (detected by the tool):
 
-Log file example:
-
-    logs/link-checker.log
+    <!-- navigation-link-href:'' -->
 
 ------------------------------------------------------------------------
 
@@ -123,7 +159,7 @@ Run manually:
 php bin/check-links
 ```
 
-or
+or:
 
 ``` bash
 /usr/bin/php8.3 bin/check-links
@@ -134,6 +170,7 @@ Example output:
     TYPO3 Navigation Link Checker started
     Checking site: https://example.com
     Found 120 pages
+    120/120 [████████████████████████████] 100%
     Navigation links found: 850
     Invalid navigation links: 2
     Flushing TYPO3 cache
@@ -145,10 +182,16 @@ Example output:
 
 # Cronjob Example
 
+Run every hour:
+
+``` bash
+0 * * * * /usr/bin/php /path/to/typo3-link-checker/bin/check-links > /dev/null 2>&1
+```
+
 Run every 30 minutes:
 
 ``` bash
-*/30 * * * * /usr/bin/php /path/to/typo3-link-checker/bin/check-links
+*/30 * * * * /usr/bin/php /path/to/typo3-link-checker/bin/check-links > /dev/null 2>&1
 ```
 
 ------------------------------------------------------------------------
@@ -156,21 +199,15 @@ Run every 30 minutes:
 # How the Tool Works
 
 1.  Reads TYPO3 sites from `config/sites/`
-2.  Reads page tree from database
+2.  Reads page tree from the TYPO3 database
 3.  Builds URLs per site and language
-4.  Crawls each page
-5.  Searches for
-
-```{=html}
-<!-- -->
-```
-    <!-- navigation-link-href:'' -->
-
-6.  Counts navigation markers
+4.  Crawls each page using concurrent HTTP requests
+5.  Searches the HTML source for navigation markers
+6.  Counts navigation markers and empty navigation links
 7.  If empty links are found:
-    -   flush TYPO3 cache
-    -   recheck pages
-    -   send email if issue remains
+    -   Flush TYPO3 cache
+    -   Recheck affected pages
+    -   Send email if issues remain
 
 ------------------------------------------------------------------------
 
@@ -191,11 +228,33 @@ Run every 30 minutes:
         Infrastructure/
         Typo3/
 
+    composer.json
+
+------------------------------------------------------------------------
+
+# Troubleshooting
+
+## Script runs very slowly
+
+Check:
+
+-   Network latency
+-   TYPO3 caching
+-   Server resources
+
+## Mail not sent
+
+Verify:
+
+-   SMTP credentials
+-   Firewall rules
+-   Log file output
+
 ------------------------------------------------------------------------
 
 # Security
 
-Do not commit real credentials.
+Do **not commit real credentials**.
 
 Recommended:
 
