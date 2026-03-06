@@ -40,7 +40,7 @@ notification email if problems remain.
 Clone the repository:
 
 ``` bash
-git clone https://github.com/YOUR-REPOSITORY/typo3-link-checker.git
+git clone https://github.com/theandy/typo3-link-checker.git
 cd typo3-link-checker
 ```
 

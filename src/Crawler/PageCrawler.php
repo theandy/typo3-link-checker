@@ -29,8 +29,8 @@ class PageCrawler
     {
 
         $requests = function ($urls) {
-            foreach ($urls as $url) {
-                yield new Request('GET', $url);
+            foreach ($urls as $i => $url) {
+                yield $i => new Request('GET', $url);
             }
         };
 
@@ -42,20 +42,19 @@ class PageCrawler
 
                 $html = (string)$response->getBody();
 
-                $callback($urls[$index], $html);
+                $callback($urls[$index], $html, $index);
 
             },
 
             'rejected' => function ($reason, $index) use ($urls, $callback) {
 
-                $callback($urls[$index], '');
+                $callback($urls[$index], '', $index);
 
             }
 
         ]);
 
-        $promise = $pool->promise();
-        $promise->wait();
+        $pool->promise()->wait();
 
     }
 
