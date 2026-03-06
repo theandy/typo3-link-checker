@@ -47,9 +47,13 @@ class Application
 
                 $url = rtrim($site['base'], '/') . '/' . ltrim($page['slug'], '/');
 
+                echo "Checking: $url\n";
+
                 $html = $crawler->fetch($url);
 
                 if ($checker->hasInvalidLink($html)) {
+
+                    echo "   → INVALID LINK FOUND\n";
 
                     $invalidPages[] = $url;
 
