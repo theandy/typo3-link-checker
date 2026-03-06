@@ -26,20 +26,22 @@ class NavigationLinkChecker
         }
 
         /*
-         * erkennt:
-         *
-         * <!-- navigation-link-href:'' -->
-         * <!-- navigation-link-href: '' -->
-         * <!--navigation-link-href:''-->
+         * Alle HTML Kommentare holen
          */
 
-        preg_match_all(
-            '/navigation-link-href:\s*[\'"]\s*[\'"]/',
-            $html,
-            $matches
-        );
+        preg_match_all('/<!--(.*?)-->/s', $html, $comments);
 
-        return count($matches[0]);
+        $invalid = 0;
+
+        foreach ($comments[1] as $comment) {
+
+            if (preg_match('/navigation-link-href\s*:\s*[\'"]\s*[\'"]/', $comment)) {
+                $invalid++;
+            }
+
+        }
+
+        return $invalid;
 
     }
 
